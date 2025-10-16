@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Doctor Console — 21-Day Metrics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Font & Chart.js -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --muted:#475569;   /* slate-600 */
+      --text:#0f172a;    /* slate-900 */
+      --accent:#2563eb;  /* blue-600 */
+      --border:#e2e8f0;  /* slate-200 */
+      --border-dark:#cbd5e1; /* slate-300 */
+      --soft:#f8fafc;    /* slate-50 */
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Noto Sans,sans-serif;
+      line-height:1.45;
+    }
+
+    /* Header */
+    .appbar{
+      position:sticky;top:0;z-index:50;
+      background:#ffffffd9;backdrop-filter:blur(6px);
+      border-bottom:1px solid var(--border);
+    }
+    .appbar-inner{
+      max-width:1200px;margin:0 auto;
+      padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+    }
+    .title-wrap{display:flex;align-items:center;gap:12px}
+    .tmh-logo{
+      width:32px;height:32px;border-radius:6px;object-fit:contain;border:1px solid var(--border);
+      background:#fff;padding:2px;
+    }
+    .title-sub{font-size:12px;color:var(--muted);margin:0}
+    .title-main{font-size:20px;font-weight:700;margin:2px 0 0}
+
+    .btn{
+      background:#fff;color:var(--text);border:1px solid var(--border-dark);
+      padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--accent);border-color:transparent;color:#fff}
+
+    /* Layout */
+    .container{max-width:1200px;margin:0 auto;padding:22px 20px 60px}
+    .grid{display:grid;gap:16px}
+    .grid-4{grid-template-columns:repeat(1,minmax(0,1fr))}
+    .grid-2-1{grid-template-columns:1fr}
+    @media (min-width:640px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+    @media (min-width:1024px){
+      .grid-4{grid-template-columns:repeat(4,1fr)}
+      .grid-2-1{grid-template-columns:2fr 1fr}
+    }
+
+    /* Cards */
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow:0 2px 6px rgba(15,23,42,.05);
+    }
+    .card-body{padding:16px}
+    .card-body-lg{padding:20px}
+
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px}
+    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+    .subnote{color:var(--muted);font-size:12px}
+
+    /* Stats */
+    .stat{display:flex;align-items:center;gap:12px;padding:16px}
+    .stat-icon{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
+      background:var(--soft);border:1px solid var(--border);
+      font-size:18px;
+    }
+    .stat-text .label{color:var(--muted);font-size:12px}
+    .stat-text .value{font-size:24px;font-weight:700;margin-top:2px}
+    .stat-text .sub{color:var(--muted);font-size:12px;margin-top:4px}
+
+    /* Schedule */
+    .schedule-grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:10px}
+    @media (min-width:640px){.schedule-grid{grid-template-columns:repeat(2,1fr)}}
+    @media (min-width:1024px){.schedule-grid{grid-template-columns:repeat(3,1fr)}}
+    .slot{
+      border:1px solid var(--border);
+      border-radius:14px;padding:12px;display:flex;gap:10px;align-items:flex-start;background:#fff;
+    }
+    .slot:hover{background:#fdfdfd}
+    .slot-left{display:flex;flex-direction:column;align-items:center;gap:6px}
+    .slot-logo{width:22px;height:22px;border-radius:4px;object-fit:contain;border:1px solid var(--border);background:#fff}
+    .slot-time{color:var(--muted);font-size:12px}
+    .slot-name{font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .slot-reason{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* Charts */
+    .chart-wrap{height:380px}
+    .chart-wrap-sm{height:280px}
+    .chart-wrap-xs{height:240px}
+
+    /* Emoji sizes */
+    .i-activity,.i-heart,.i-thermo,.i-syringe,.i-calendar{font-size:18px}
+  </style>
+</head>
+<body>
+  <!-- App Bar -->
+  <div class="appbar">
+    <div class="appbar-inner">
+      <div class="title-wrap">
+        <img src="tmh.png" alt="TMH" class="tmh-logo" />
+        <div>
+          <p class="title-sub">Doctor Console — Tata Memorial Hospital</p>
+          <h1 class="title-main">Patient Overview</h1>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn">📅 Today</button>
+        <button class="btn btn-primary">Add Note</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="container">
+    <!-- Top Stats -->
+    <div class="grid grid-4">
+      <div class="card">
+        <div class="stat">
+          <div class="stat-icon">📈</div>
+          <div class="stat-text">
+            <div class="label">Patients Today</div>
+            <div class="value">24</div>
+            <div class="sub">7 new, 17 follow-ups</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="stat">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-text">
+            <div class="label">Critical Alerts</div>
+            <div class="value">3</div>
+            <div class="sub">2 BP, 1 Arrhythmia</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="stat">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-text">
+            <div class="label">Avg. Wait Time</div>
+            <div class="value">11 min</div>
+            <div class="sub">Goal: &lt; 15 min</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="stat">
+          <div class="stat-icon">💓</div>
+          <div class="stat-text">
+            <div class="label">Bed Occupancy</div>
+            <div class="value">78%</div>
+            <div class="sub">ICU 5/8, Ward 26/32</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 21-Day Vital Trends -->
+    <div class="section-header">
+      <div class="section-title"><span class="i-activity">📊</span> 21-Day Vital Trends</div>
+      <div class="subnote">Spikes on Days 9–11 indicate a trend</div>
+    </div>
+    <div class="card">
+      <div class="card-body-lg">
+        <div class="chart-wrap">
+          <canvas id="chartVitals"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blood Pressure -->
+    <div class="section-header">
+      <div class="section-title"><span class="i-heart">💗</span> Blood Pressure — 21 Days (Outpatient Care)</div>
+      <div class="subnote">Notice spikes on Day 10–11</div>
+    </div>
+    <div class="grid grid-2-1">
+      <div class="card">
+        <div class="card-body-lg">
+          <div class="chart-wrap">
+            <canvas id="chartBP"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body-lg">
+          <div class="subnote" style="margin-bottom:8px">BP Variability Index (Pulse Pressure)</div>
+          <div class="chart-wrap-sm">
+            <canvas id="chartPulsePressure"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Glucose & SpO2 -->
+    <div class="section-header">
+      <div class="section-title"><span class="i-syringe">💉</span> Daily Metrics — Glucose &amp; SpO₂ (21 Days)</div>
+    </div>
+    <div class="card">
+      <div class="card-body-lg">
+        <div class="chart-wrap">
+          <canvas id="chartGluSpO2"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="section-header">
+      <div class="section-title"><span class="i-calendar">🗓️</span> Today’s Schedule</div>
+      <button class="btn">View All</button>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="schedule-grid" id="scheduleGrid"></div>
+      </div>
+    </div>
+
+    <!-- Daily Temperature Mini -->
+    <div class="section-header">
+      <div class="section-title"><span class="i-thermo">🌡️</span> Daily Temperature (21 Days)</div>
+    </div>
+    <div class="card">
+      <div class="card-body-lg">
+        <div class="chart-wrap-xs">
+          <canvas id="chartTemp"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ------- Helpers ------- //
+    const days = Array.from({length:21},(_,i)=>`Day ${i+1}`);
+    const axisColor = '#334155'; // slate-700
+    const gridLight  = 'rgba(148,163,184,0.25)'; // light grid
+
+    function withSpikes(baseline, amplitude){
+      const arr=[];
+      for(let d=1; d<=21; d++){
+        let v = baseline + Math.round((Math.sin(d/2.4)+1)*3);
+        if(d===9)  v += amplitude*1.1;
+        if(d===10) v += amplitude*1.7; // strongest spike
+        if(d===11) v += amplitude*1.2; // tapering
+        arr.push(v);
+      }
+      return arr;
+    }
+
+    // Vitals
+    const hrVals   = withSpikes(72,10);
+    const tempVals = withSpikes(98,1).map(v=>+v.toFixed(1));
+    const rrVals   = withSpikes(16,2);
+
+    // BP
+    const sysVals = withSpikes(118,14);
+    const diaVals = withSpikes(76,7);
+    const pulsePressure = sysVals.map((s,i)=>s - diaVals[i]);
+
+    // Glucose & SpO2
+    const gluVals  = withSpikes(102,20);
+    const spo2Vals = withSpikes(96,2).map(v=>Math.min(100,v));
+
+    // Schedule dummy data
+    const schedule = [
+      { time: "09:10", patient: "Ananya Rao", reason: "Post-op review", room: "OPD-3" },
+      { time: "09:40", patient: "Rahul Mehta", reason: "Hypertension follow-up", room: "OPD-2" },
+      { time: "10:15", patient: "Fatima Khan", reason: "Diabetes counseling", room: "OPD-5" },
+      { time: "11:00", patient: "Arjun Patel", reason: "ECG review", room: "OPD-4" },
+      { time: "11:30", patient: "Neha Gupta", reason: "Fever & vitals check", room: "OPD-1" },
+      { time: "12:10", patient: "Karan Singh", reason: "Asthma management", room: "OPD-6" },
+    ];
+
+    // Populate schedule (with TMH icon)
+    const grid = document.getElementById('scheduleGrid');
+    schedule.forEach(s=>{
+      const el = document.createElement('div');
+      el.className = 'slot';
+      el.innerHTML = `
+        <div class="slot-left">
+          <img src="tmh.png" alt="TMH" class="slot-logo" />
+          <div aria-hidden="true">🗓️</div>
+        </div>
+        <div>
+          <div class="slot-time">${s.time} · ${s.room}</div>
+          <div class="slot-name">${s.patient}</div>
+          <div class="slot-reason">${s.reason}</div>
+        </div>`;
+      grid.appendChild(el);
+    });
+
+    // ------- Chart.js base options for light theme ------- //
+    const baseOptions = {
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{ ticks:{ color:axisColor, maxRotation:0, autoSkip:true }, grid:{ color:gridLight } },
+        y:{ ticks:{ color:axisColor }, grid:{ color:gridLight } }
+      },
+      plugins:{
+        legend:{ labels:{ color:'#0f172a' } },
+        tooltip:{ mode:'index', intersect:false }
+      }
+    };
+
+    // 21-Day Vital Trends
+    new Chart(document.getElementById('chartVitals'),{
+      type:'line',
+      data:{
+        labels:days,
+        datasets:[
+          { label:'Heart Rate (bpm)', data:hrVals, borderWidth:2, tension:0.35 },
+          { label:'Temperature (°F)', data:tempVals, borderWidth:2, tension:0.35, yAxisID:'y2' },
+          { label:'Resp. Rate (rpm)', data:rrVals, borderWidth:2, tension:0.35 },
+        ]
+      },
+      options:{
+        ...baseOptions,
+        scales:{
+          x: baseOptions.scales.x,
+          y: { ...baseOptions.scales.y, suggestedMin:60, suggestedMax:120 },
+          y2:{ position:'right', ticks:{ color:axisColor }, grid:{ drawOnChartArea:false }, suggestedMin:95, suggestedMax:103 }
+        }
+      }
+    });
+
+    // Blood Pressure
+    new Chart(document.getElementById('chartBP'),{
+      type:'line',
+      data:{
+        labels:days,
+        datasets:[
+          { label:'Systolic', data:sysVals, borderWidth:2, fill:true },
+          { label:'Diastolic', data:diaVals, borderWidth:2, fill:true },
+        ]
+      },
+      options:{
+        ...baseOptions,
+        scales:{
+          x: baseOptions.scales.x,
+          y: { ...baseOptions.scales.y, suggestedMin:60, suggestedMax:160 }
+        }
+      }
+    });
+
+    // Pulse Pressure (bar)
+    new Chart(document.getElementById('chartPulsePressure'),{
+      type:'bar',
+      data:{ labels:days, datasets:[{ label:'Pulse Pressure', data:pulsePressure, borderWidth:1 }] },
+      options:{
+        ...baseOptions,
+        scales:{ x:{ display:false, grid:{ display:false } }, y:{ display:false, suggestedMin:0, suggestedMax:60, grid:{ display:false } } },
+        plugins:{ legend:{ display:false } }
+      }
+    });
+
+    // Glucose & SpO2 (dual axes)
+    new Chart(document.getElementById('chartGluSpO2'),{
+      type:'line',
+      data:{
+        labels:days,
+        datasets:[
+          { label:'Glucose (mg/dL)', data:gluVals, borderWidth:2, tension:0.35, yAxisID:'y1' },
+          { label:'SpO₂ (%)', data:spo2Vals, borderWidth:2, tension:0.35, yAxisID:'y2' },
+        ]
+      },
+      options:{
+        ...baseOptions,
+        scales:{
+          x: baseOptions.scales.x,
+          y1:{ ...baseOptions.scales.y, suggestedMin:80, suggestedMax:220 },
+          y2:{ position:'right', ticks:{ color:axisColor }, grid:{ drawOnChartArea:false }, suggestedMin:90, suggestedMax:100 }
+        }
+      }
+    });
+
+    // Daily Temperature (mini)
+    new Chart(document.getElementById('chartTemp'),{
+      type:'line',
+      data:{ labels:days, datasets:[{ label:'Temperature (°F)', data:tempVals, borderWidth:2, tension:0.35 }] },
+      options:{
+        ...baseOptions,
+        scales:{
+          x: baseOptions.scales.x,
+          y: { ...baseOptions.scales.y, suggestedMin:96, suggestedMax:104 }
+        },
+        plugins:{ legend:{ display:false } }
+      }
+    });
+  </script>
+</body>
+</html>
